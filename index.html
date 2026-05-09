@@ -787,6 +787,7 @@ const joy = { active:false, id:null, sx:0, sy:0, dx:0, dy:0, dist:0 };
 let shooting = false;
 let shootInterval = null;
 let lastShot = 0;
+let waveClear = false;
 
 // ── Stars background ─────────────────────────────────────
 function initStars() {
@@ -867,6 +868,7 @@ function initGame() {
   player.trail = [];
   currentWeapon = 'blaster';
   bullets = []; enemies = []; particles = []; orbs = []; powerups = [];
+  waveClear = false;
   initStars();
   spawnWave(1);
   updateHUD();
@@ -1439,12 +1441,16 @@ function update() {
   }
 
   // ── Wave clear ───────────────────────────────────────
-  if (enemies.length === 0 && state === STATE.PLAYING) {
+  if (enemies.length === 0 && state === STATE.PLAYING && !waveClear) {
+    waveClear = true;
     wave++;
     score += wave * 50;
     player.bombs = Math.min(player.bombs+1, 9);
     updateHUD();
-    setTimeout(() => spawnWave(wave), 2000);
+    setTimeout(() => {
+      spawnWave(wave);
+      waveClear = false;
+    }, 2000);
   }
 }
 
