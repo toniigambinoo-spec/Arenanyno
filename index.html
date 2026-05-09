@@ -226,10 +226,44 @@ position: relative;
 
 #shootZone { display: none; }
 
+/* FIRE button — big, bottom-left */
+#fireBtn {
+position: fixed;
+bottom: 30px;
+left: 30px;
+width: 90px; height: 90px;
+border-radius: 50%;
+background: radial-gradient(circle at 40% 35%, rgba(255,45,107,0.35), rgba(255,45,107,0.08));
+border: 2.5px solid rgba(255,45,107,0.7);
+box-shadow: 0 0 24px rgba(255,45,107,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+display: flex; align-items: center; justify-content: center;
+flex-direction: column;
+gap: 2px;
+cursor: pointer;
+z-index: 20;
+transition: transform 0.07s, box-shadow 0.07s;
+}
+
+#fireBtn:active,
+#fireBtn.firing {
+transform: scale(0.9);
+background: radial-gradient(circle at 40% 35%, rgba(255,45,107,0.6), rgba(255,45,107,0.2));
+box-shadow: 0 0 40px rgba(255,45,107,0.7), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+#fireBtn .fire-icon { font-size: 1.8rem; line-height: 1; }
+#fireBtn .fire-lbl {
+font-family: var(–font-hud);
+font-size: 0.5rem;
+letter-spacing: 2px;
+color: rgba(255,45,107,0.9);
+text-shadow: 0 0 6px rgba(255,45,107,0.6);
+}
+
 #bombBtn {
 position: fixed;
-bottom: 120px;
-left: 22px;
+bottom: 135px;
+left: 38px;
 width: 52px; height: 52px;
 border-radius: 50%;
 background: rgba(255,230,0,0.08);
@@ -590,11 +624,11 @@ animation: dmgFloat 0.9s ease-out forwards;
   </div>
 </div>
 
-<div id="shootZone">
-  <div id="shootBtn">
-    <span class="fire-icon">🔥</span>
-    <span class="fire-lbl">FIRE</span>
-  </div>
+<div id="shootZone"></div>
+
+<div id="fireBtn">
+  <span class="fire-icon">🔥</span>
+  <span class="fire-lbl">FIRE</span>
 </div>
 
 <div id="bombBtn">
@@ -615,7 +649,7 @@ animation: dmgFloat 0.9s ease-out forwards;
     </div>
     <div class="how-item">
       <div class="how-icon">🔥</div>
-      <div class="how-txt">Tir automatique</div>
+      <div class="how-txt">Bouton FIRE pour tirer</div>
     </div>
     <div class="how-item">
       <div class="how-icon">💥</div>
@@ -732,6 +766,7 @@ let stars     = [];
 
 const joy = { active:false, id:null, sx:0, sy:0, dx:0, dy:0, dist:0 };
 let lastShot = 0;
+let isShooting = false; // manual fire button state
 let waveClear = false;
 
 // ── Difficulty scaling ──────────────────────────────────
@@ -857,8 +892,8 @@ function getWaveEnemyCount(w) {
 }
 
 function getSpawnInterval(w) {
-  // Enemies spawn faster each wave (min 40 frames ~0.7s)
-  return Math.max(40, 180 - w * 12);
+  // Starts fast (80 frames ~1.3s), gets very fast at high waves (min 25 frames)
+  return Math.max(25, 80 - w * 5);
 }
 
 function startWave(w) {
@@ -1241,7 +1276,8 @@ function update() {
     player.y = Math.max(player.r, Math.min(canvas.height-player.r, player.y + ny*player.speed*norm));
   }
 
-  fireWeapon();
+  // Fire only when button held
+  if (isShooting) fireWeapon();
 
   if (player.invincible > 0) player.invincible--;
 
@@ -1585,6 +1621,7 @@ function gameOver() {
 // ── Controls ─────────────────────────────────────────────
 const joystickZone = document.getElementById('joystickZone');
 const joystickKnob = document.getElementById('joystickKnob');
+const fireBtn      = document.getElementById('fireBtn');
 const bombBtn      = document.getElementById('bombBtn');
 
 function startJoy(touch) {
@@ -1615,14 +1652,23 @@ joystickZone.addEventListener('touchstart', e => { e.preventDefault(); for (cons
 joystickZone.addEventListener('touchmove',  e => { e.preventDefault(); for (const t of e.changedTouches) moveJoy(t);  }, { passive:false });
 joystickZone.addEventListener('touchend',   e => { e.preventDefault(); endJoy(); }, { passive:false });
 
+// Fire button — hold to shoot
+fireBtn.addEventListener('touchstart', e => { e.preventDefault(); isShooting = true; fireBtn.classList.add('firing'); }, { passive:false });
+fireBtn.addEventListener('touchend',   e => { e.preventDefault(); isShooting = false; fireBtn.classList.remove('firing'); }, { passive:false });
+fireBtn.addEventListener('touchcancel',e => { isShooting = false; fireBtn.classList.remove('firing'); }, { passive:false });
+
 bombBtn.addEventListener('touchstart', e => { e.preventDefault(); if (state === STATE.PLAYING) useBomb(); }, { passive:false });
 
 const keys = {};
 document.addEventListener('keydown', e => {
   keys[e.key] = true;
+  if (e.key === ' ') { isShooting = true; e.preventDefault(); }
   if (e.key === 'b' || e.key === 'B') useBomb();
 });
-document.addEventListener('keyup', e => { keys[e.key] = false; });
+document.addEventListener('keyup', e => {
+  keys[e.key] = false;
+  if (e.key === ' ') isShooting = false;
+});
 
 setInterval(() => {
   if (state !== STATE.PLAYING) return;
